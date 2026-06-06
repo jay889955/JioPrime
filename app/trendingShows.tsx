@@ -1,124 +1,53 @@
-import { Image } from "expo-image";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import {
-  Button, // For efficient list rendering
+  Button,
   Dimensions,
   FlatList,
-  LayoutAnimation,
-  Platform,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
-  UIManager,
   useColorScheme,
   View,
 } from "react-native";
-
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
-
-import { Colors } from "@/constants/Colors";
-import { Movie, useMovieContext } from "@/contexts/movieContext";
-import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
+import { useMovieContext } from "@/contexts/movieContext";
+import { Series } from "@/contexts/movieContext/types";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { createShimmerPlaceholder } from "react-native-shimmer-placeholder";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { MaterialIcons } from "@expo/vector-icons";
+import { Colors } from "@/constants/Colors";
 
-const { width } = Dimensions.get("window"); // Get screen width
+const { width } = Dimensions.get("window");
 
-interface PopularListProps {
-  ListHeaderComponent?: React.ReactElement | null;
-}
-
-const PopularList: React.FC<PopularListProps> = ({ ListHeaderComponent }) => {
+export default function TrendingShowsScreen() {
   const {
-    movies,
-    loadingMovies,
+    series,
+    loadingSeries,
     error,
-    currentPage,
-    totalPages,
-    fetchPopularMovies,
-    hasMore,
+    seriesCurrentPage,
+    seriesTotalPages,
+    fetchPopularSeries,
+    seriesHasMore,
   } = useMovieContext();
 
   const colorScheme = useColorScheme();
   const color = Colors[colorScheme ?? "dark"];
   const ShimmerPlaceholder = createShimmerPlaceholder(LinearGradient);
-
   const router = useRouter();
-
+  
   const flatListRef = useRef<FlatList>(null);
-  const [showShimmer, setShowShimmer] = useState(false);
   const [showGoToTop, setShowGoToTop] = useState(false);
-
-  useEffect(() => {
-    if (loadingMovies && movies.length === 0) {
-      setShowShimmer(true);
-    } else if (!loadingMovies) {
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-      const timer = setTimeout(() => setShowShimmer(false), 250);
-      return () => clearTimeout(timer);
-    }
-  }, [loadingMovies, movies.length]);
-
-  const ShimmerGrid = () => (
-    <View style={{ width: "100%" }}>
-      {[1, 2].map((row) => (
-        <View key={row} style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 16 }}>
-          {[1, 2].map((col) => (
-            <ShimmerPlaceholder
-              key={`${row}-${col}`}
-              shimmerColors={
-                colorScheme === "dark" ? ["#1a1a1a", "#2a2a2a", "#1a1a1a"] : ["#ebebeb", "#d3d3d3", "#ebebeb"]
-              }
-              style={{
-                height: 250,
-                width: (width - 30) / 2,
-                borderRadius: 20,
-              }}
-              visible={!showShimmer}
-              duration={1200}
-              delay={(row * 2 + col) * 150}
-              shimmerStyle={{
-                opacity: showShimmer ? 1 : 0,
-                transition: "opacity 0.3s",
-              }}
-            />
-          ))}
-        </View>
-      ))}
-    </View>
-  );
-
-  if (showShimmer || (loadingMovies && movies.length === 0)) {
-    return (
-      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-        {ListHeaderComponent}
-        <ShimmerGrid />
-      </ScrollView>
-    );
-  }
-
-  if (error && movies.length === 0) {
-    return (
-      <View style={styles.centeredContainer}>
-        <Text style={styles.errorText}>
-          Error: {error} please change you dns
-        </Text>
-        <Button title="Retry" onPress={() => fetchPopularMovies(currentPage)} />
-      </View>
-    );
-  }
 
   const handlePress = (id: number) => {
     router.push({
-      pathname: "/(player)/details",
-      params: { id: id.toString(), type: "movie" },
+      pathname: "/(player)/tvDetails",
+      params: { id: id.toString() },
     });
   };
-  const renderItem = ({ item }: { item: Movie }) => (
+
+  const renderItem = ({ item }: { item: Series }) => (
     <TouchableOpacity
       style={styles.movieCard}
       onPress={() => handlePress(item.id)}
@@ -140,8 +69,8 @@ const PopularList: React.FC<PopularListProps> = ({ ListHeaderComponent }) => {
   );
 
   const handleEndReached = () => {
-    if (!loadingMovies && hasMore && currentPage < totalPages) {
-      fetchPopularMovies(currentPage + 1);
+    if (!loadingSeries && seriesHasMore && seriesCurrentPage < seriesTotalPages) {
+      fetchPopularSeries(seriesCurrentPage + 1);
     }
   };
 
@@ -149,8 +78,32 @@ const PopularList: React.FC<PopularListProps> = ({ ListHeaderComponent }) => {
     flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
   };
 
+  if (error && series.length === 0) {
+    return (
+      <SafeAreaView style={[styles.screen, { backgroundColor: color.background }]}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <MaterialIcons name="arrow-back" size={28} color={color.icon} />
+          </TouchableOpacity>
+          <Text style={[styles.title, { color: color.text }]}>Trending Shows</Text>
+        </View>
+        <View style={styles.centeredContainer}>
+          <Text style={styles.errorText}>Error: {error}</Text>
+          <Button title="Retry" onPress={() => fetchPopularSeries(1)} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
-    <>
+    <SafeAreaView style={[styles.screen, { backgroundColor: color.background }]}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <MaterialIcons name="arrow-back" size={28} color={color.icon} />
+        </TouchableOpacity>
+        <Text style={[styles.title, { color: color.text }]}>Trending Shows</Text>
+      </View>
+      
       <FlatList
         ref={flatListRef}
         onScroll={(e) => {
@@ -158,9 +111,8 @@ const PopularList: React.FC<PopularListProps> = ({ ListHeaderComponent }) => {
           setShowGoToTop(offsetY > 400);
         }}
         scrollEventThrottle={16}
-        ListHeaderComponent={ListHeaderComponent}
         showsVerticalScrollIndicator={false}
-        data={movies}
+        data={series}
         renderItem={renderItem}
         keyExtractor={(item) => item.id.toString()}
         numColumns={2}
@@ -169,7 +121,7 @@ const PopularList: React.FC<PopularListProps> = ({ ListHeaderComponent }) => {
         onEndReached={handleEndReached}
         onEndReachedThreshold={0.5}
         ListFooterComponent={
-          loadingMovies ? (
+          loadingSeries ? (
             <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 16 }}>
               <ShimmerPlaceholder
                 shimmerColors={
@@ -179,7 +131,7 @@ const PopularList: React.FC<PopularListProps> = ({ ListHeaderComponent }) => {
                 style={{
                   height: 250,
                   width: (width - 30) / 2,
-                  borderRadius: 8
+                  borderRadius: 20,
                 }}
               />
               <ShimmerPlaceholder
@@ -197,7 +149,7 @@ const PopularList: React.FC<PopularListProps> = ({ ListHeaderComponent }) => {
             </View>
           ) : null
         }
-        ItemSeparatorComponent={() => <View style={{ height: 16 }} />} // 16px vertical space between rows
+        ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
       />
       {showGoToTop && (
         <TouchableOpacity
@@ -206,26 +158,45 @@ const PopularList: React.FC<PopularListProps> = ({ ListHeaderComponent }) => {
           activeOpacity={0.8}
         >
           <View style={styles.fabInner}>
-            <Ionicons name="arrow-up" size={20} color={color.background} />
+            <MaterialIcons name="arrow-upward" size={20} color={color.background} />
             <Text style={[styles.fabText, { color: color.background }]}>Top</Text>
           </View>
         </TouchableOpacity>
       )}
-    </>
+    </SafeAreaView>
   );
-};
+}
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    marginBottom: 10,
+  },
+  backButton: {
+    padding: 5,
+    marginRight: 10,
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: "bold",
+  },
   container: {
     paddingHorizontal: 10,
+    paddingBottom: 20,
   },
   columnWrapper: {
     justifyContent: "space-between",
   },
   centeredContainer: {
-    // flex: 1,
-    // justifyContent: "center",
-    // alignItems: "center",
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
   errorText: {
     color: "red",
@@ -233,7 +204,6 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     textAlign: "center",
   },
-
   movieCard: {
     width: (width - 30) / 2,
     justifyContent: "center",
@@ -241,18 +211,16 @@ const styles = StyleSheet.create({
   },
   posterImage: {
     width: "100%",
-    height: 250, // Fixed height for posters
-    borderRadius: 8,
+    height: 250,
+    borderRadius: 20,
     shadowColor: "#000",
     shadowOffset: { width: 10, height: 10 },
-    // marginBottom: 30,
   },
   noPoster: {
     width: "100%",
     height: 250,
     backgroundColor: "#ccc",
-    // borderRadius: 8,
-    marginBottom: 10,
+    borderRadius: 8,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -260,11 +228,6 @@ const styles = StyleSheet.create({
     color: "#666",
     fontSize: 16,
     textAlign: "center",
-  },
-  pageText: {
-    fontSize: 16,
-    marginHorizontal: 10,
-    color: "#666",
   },
   fabContainer: {
     position: "absolute",
@@ -292,5 +255,3 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
 });
-
-export default React.memo(PopularList);

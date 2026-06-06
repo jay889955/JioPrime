@@ -6,16 +6,19 @@ import { Colors } from "@/constants/Colors";
 import { useNavigation } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 
+import { useRouter } from "expo-router";
 import React, { useEffect } from "react";
-import { StyleSheet, Text, useColorScheme } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, useColorScheme, View } from "react-native";
 // import { ScrollView } from "react-native-gesture-handler";
 
+import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default React.memo(function HomePage() {
   const colorScheme = useColorScheme();
   const color = Colors[colorScheme ?? "dark"];
   const navigation = useNavigation();
+  const router = useRouter();
 
   useEffect(() => {
     navigation.setOptions({ headerShown: false });
@@ -25,15 +28,29 @@ export default React.memo(function HomePage() {
 
   return (
     <SafeAreaView
+      edges={['top']}
       style={{
         backgroundColor: colorScheme === "dark" ? "#000" : "#fff",
+        flex: 1,
       }}
     >
       <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
-      <Text style={[styles.title, { color: color.text }]}>Trending</Text>
-      <MovieList />
-      <Text style={[styles.title, { color: color.text }]}>Now Playing</Text>
-      <PopularList />
+      <PopularList
+
+        ListHeaderComponent={
+          <>
+            <View style={styles.headerRow}>
+              <Text style={[styles.title, { color: color.text }]}>Trending Shows</Text>
+              <TouchableOpacity style={{ flexDirection: "row", alignItems: "center", gap: 5 }} onPress={() => router.push("/trendingShows")}>
+                <Text style={[styles.seeAll, { color: color.tabIconDefault }]}>See All</Text>
+                <Ionicons name="arrow-forward" size={18} color={color.tabIconDefault} />
+              </TouchableOpacity>
+            </View>
+            <MovieList />
+            <Text style={[styles.title, { color: color.text, paddingHorizontal: 20, marginBottom: 15 }]}>Now Playing</Text>
+          </>
+        }
+      />
     </SafeAreaView>
   );
 });
@@ -47,9 +64,18 @@ const styles = StyleSheet.create({
   },
   title: {
     fontWeight: "bold",
-    fontSize: 26,
+    fontSize: 30,
     fontStyle: "normal",
+  },
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 20,
     marginVertical: 10,
+  },
+  seeAll: {
+    fontSize: 16,
+    fontWeight: "600",
   },
 });
