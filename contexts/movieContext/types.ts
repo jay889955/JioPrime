@@ -43,6 +43,9 @@ export interface MovieContextState {
     totalPages: number;
     totalResults: number;
     series: Series[];
+    seriesCurrentPage: number;
+    seriesTotalPages: number;
+    seriesTotalResults: number;
 }
 
 // Define the shape of actions/functions consumers can use
@@ -52,4 +55,4 @@ export interface MovieContextActions {
 }
 
 // Combine for the full context value
-export type MovieContextType = MovieContextState & MovieContextActions & { hasMore: boolean, loadingMovies: boolean, loadingSeries: boolean };
+export type MovieContextType = MovieContextState & MovieContextActions & { hasMore: boolean, seriesHasMore: boolean, loadingMovies: boolean, loadingSeries: boolean };

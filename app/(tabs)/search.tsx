@@ -11,6 +11,7 @@ import {
   Dimensions,
   FlatList,
   Image,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -30,6 +31,14 @@ const Search: React.FC = () => {
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [showContent, setShowContent] = useState(false);
+  const [selectedProvider, setSelectedProvider] = useState<number | null>(null);
+
+  const PROVIDERS = [
+    { name: "Trending", id: null },
+    { name: "Netflix", id: 8 },
+    { name: "Prime Video", id: 9 },
+    { name: "Apple TV+", id: 350 },
+  ];
 
   const latestCallIdRef = useRef<number>(0);
   const currentAbortControllerRef = useRef<AbortController | null>(null);
@@ -37,40 +46,57 @@ const Search: React.FC = () => {
 
   const ShimmerPlaceholder = createShimmerPlaceholder(LinearGradient);
 
-  const fetchInitial = useCallback(async (): Promise<void> => {
+  const fetchInitial = useCallback(async (providerId: number | null = selectedProvider): Promise<void> => {
     setSearchLoading(true);
     setSearchError(null);
     try {
-      const response = await fetch(
-        `${API_URL}trending/all/day?language=en-US&page=1`,
-        {
-          headers: API_HEADERS,
-        },
-      );
-
-      if (!response.ok) {
-        // Handle HTTP errors (e.g., 401 Unauthorized, 404 Not Found)
-        const errorData = await response.json();
-        throw new Error(
-          errorData.status_message || `HTTP error! status: ${response.status}`,
+      if (!providerId) {
+        const response = await fetch(
+          `${API_URL}trending/all/day?language=en-US&page=1`,
+          {
+            headers: API_HEADERS,
+          },
         );
-      }
 
-      const data = await response.json();
-      setSearchResults(data.results);
-      // Do NOT update currentPage, totalPages, or totalResults here
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(
+            errorData.status_message || `HTTP error! status: ${response.status}`,
+          );
+        }
+
+        const data = await response.json();
+        setSearchResults(data.results);
+      } else {
+        const [tvRes, movieRes] = await Promise.all([
+          fetch(`${API_URL}discover/tv?language=en-US&sort_by=popularity.desc&watch_region=US&with_watch_providers=${providerId}`, { headers: API_HEADERS }),
+          fetch(`${API_URL}discover/movie?language=en-US&sort_by=popularity.desc&watch_region=US&with_watch_providers=${providerId}`, { headers: API_HEADERS })
+        ]);
+
+        if (!tvRes.ok || !movieRes.ok) {
+          throw new Error(`HTTP error! status: ${tvRes.status || movieRes.status}`);
+        }
+
+        const tvData = await tvRes.json();
+        const movieData = await movieRes.json();
+
+        const combined = [...(tvData.results || []), ...(movieData.results || [])]
+          .sort((a: any, b: any) => b.popularity - a.popularity);
+
+        setSearchResults(combined as any);
+      }
     } catch (err) {
-      console.error("Failed to fetch series:", err);
+      console.error("Failed to fetch initial:", err);
       if (err instanceof Error) {
         setSearchError(err.message);
       } else {
         setSearchError("An unknown error occurred.");
       }
-      setSearchResults([]); // Clear movies on error
+      setSearchResults([]);
     } finally {
       setSearchLoading(false);
     }
-  }, []);
+  }, [selectedProvider]);
 
   // Use useCallback to memoize the handleSearch function itself
   const handleSearch = useCallback(
@@ -148,7 +174,7 @@ const Search: React.FC = () => {
             const errorData = await response.json();
             throw new Error(
               errorData.status_message ||
-                `HTTP error! status: ${response.status}`,
+              `HTTP error! status: ${response.status}`,
             );
           }
           const data = await response.json();
@@ -239,25 +265,28 @@ const Search: React.FC = () => {
       ]}
     >
       {item.poster_path ? (
-        <>
-          <Image
-            source={{
-              uri: `https://image.tmdb.org/t/p/w200${item.poster_path}`,
-            }}
-            style={styles.posterImage}
-            resizeMode="contain"
-          />
-        </>
-      ) : null}
+        <Image
+          source={{
+            uri: `https://image.tmdb.org/t/p/w200${item.poster_path}`,
+          }}
+          style={[styles.posterImage, { backgroundColor: colorScheme === "dark" ? "#1a1a1a" : "#ebebeb" }]}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+          transition={600}
+        />
+      ) : (
+        <View style={styles.noPoster}>
+          <Text style={styles.noPosterText}>No Image</Text>
+        </View>
+      )}
     </TouchableOpacity>
   );
 
   return (
     <SafeAreaView
+      edges={['top']}
       style={{
-        flex: showContent ? 0 : 1,
-        alignItems: "center",
-        // justifyContent: "center",
+        flex: 1,
         backgroundColor: Colors[colorScheme ?? "dark"].background,
       }}
     >
@@ -296,133 +325,105 @@ const Search: React.FC = () => {
           onChangeText={handleSearch}
         />
       </View>
+
+      {!searchQuery && (
+        <View style={{ paddingHorizontal: 20, paddingBottom: 15, width: "100%" }}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {PROVIDERS.map((provider) => {
+              const isActive = selectedProvider === provider.id;
+              const activeBg = colorScheme === "dark" ? "#fff" : "#000";
+              const activeText = colorScheme === "dark" ? "#000" : "#fff";
+              const inactiveBg = colorScheme === "dark" ? "#222" : "#eee";
+              const inactiveText = colorScheme === "dark" ? "#aaa" : "#555";
+
+              return (
+                <TouchableOpacity
+                  key={provider.name}
+                  onPress={() => {
+                    setSelectedProvider(provider.id);
+                    fetchInitial(provider.id);
+                  }}
+                  style={{
+                    paddingHorizontal: 18,
+                    paddingVertical: 10,
+                    borderRadius: 25,
+                    backgroundColor: isActive ? activeBg : inactiveBg,
+                    marginRight: 12,
+                    borderWidth: 1,
+                    borderColor: isActive ? activeBg : (colorScheme === "dark" ? "#333" : "#ddd")
+                  }}
+                >
+                  <Text style={{
+                    color: isActive ? activeText : inactiveText,
+                    fontWeight: isActive ? "600" : "500",
+                    fontSize: 14,
+                  }}>
+                    {provider.name}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+      )}
+
       {searchLoading || !showContent ? (
-        <>
-          <View style={{ flexDirection: "row", gap: 3 }}>
-            <ShimmerPlaceholder
-              shimmerColors={
-                colorScheme === "dark" ? ["#222", "#111", "#222"] : undefined
-              }
-              style={{
-                height: 230,
-                width: "45%",
-                borderRadius: 16,
-                margin: 5,
-              }}
-              visible={false}
-              duration={600}
-              shimmerStyle={{
-                opacity: showContent ? 0 : 1,
-                transition: "opacity 0.3s",
-              }}
-            />
-            <ShimmerPlaceholder
-              shimmerColors={
-                colorScheme === "dark" ? ["#222", "#111", "#222"] : undefined
-              }
-              style={{
-                height: 230,
-                width: "45%",
-                borderRadius: 16,
-                margin: 5,
-              }}
-              visible={false}
-              duration={600}
-              shimmerStyle={{
-                opacity: showContent ? 0 : 1,
-                transition: "opacity 0.3s",
-              }}
-            />
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={[styles.container, { paddingTop: 10 }]}
+          style={{ width: "100%" }}
+        >
+          <View style={{ width: "100%" }}>
+            {[1, 2, 3].map((row) => (
+              <View
+                key={row}
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  marginBottom: 16,
+                }}
+              >
+                {[1, 2].map((col) => (
+                  <ShimmerPlaceholder
+                    key={`${row}-${col}`}
+                    shimmerColors={
+                      colorScheme === "dark" ? ["#1a1a1a", "#2a2a2a", "#1a1a1a"] : ["#ebebeb", "#d3d3d3", "#ebebeb"]
+                    }
+                    style={{
+                      height: 250,
+                      width: (width - 30) / 2,
+                      borderRadius: 8,
+                    }}
+                    visible={false}
+                    duration={1200}
+                    shimmerStyle={{
+                      opacity: searchLoading || !showContent ? 1 : 0,
+                      transition: "opacity 0.3s",
+                    }}
+                  />
+                ))}
+              </View>
+            ))}
           </View>
-          <View style={{ flexDirection: "row", gap: 3 }}>
-            <ShimmerPlaceholder
-              shimmerColors={
-                colorScheme === "dark" ? ["#222", "#111", "#222"] : undefined
-              }
-              style={{
-                height: 230,
-                width: "45%",
-                borderRadius: 16,
-                margin: 5,
-              }}
-              visible={false}
-              duration={600}
-              shimmerStyle={{
-                opacity: showContent ? 0 : 1,
-                transition: "opacity 0.3s",
-              }}
-            />
-            <ShimmerPlaceholder
-              shimmerColors={
-                colorScheme === "dark" ? ["#222", "#111", "#222"] : undefined
-              }
-              style={{
-                height: 230,
-                width: "45%",
-                borderRadius: 16,
-                margin: 5,
-              }}
-              visible={false}
-              duration={600}
-              shimmerStyle={{
-                opacity: showContent ? 0 : 1,
-                transition: "opacity 0.3s",
-              }}
-            />
-          </View>
-          <View style={{ flexDirection: "row", gap: 3 }}>
-            <ShimmerPlaceholder
-              shimmerColors={
-                colorScheme === "dark" ? ["#222", "#111", "#222"] : undefined
-              }
-              style={{
-                height: 230,
-                width: "45%",
-                borderRadius: 16,
-                margin: 5,
-              }}
-              visible={false}
-              duration={600}
-              shimmerStyle={{
-                opacity: showContent ? 0 : 1,
-                transition: "opacity 0.3s",
-              }}
-            />
-            <ShimmerPlaceholder
-              shimmerColors={
-                colorScheme === "dark" ? ["#222", "#111", "#222"] : undefined
-              }
-              style={{
-                height: 230,
-                width: "45%",
-                borderRadius: 16,
-                margin: 5,
-              }}
-              visible={false}
-              duration={600}
-              shimmerStyle={{
-                opacity: showContent ? 0 : 1,
-                transition: "opacity 0.3s",
-              }}
-            />
-          </View>
-        </>
+        </ScrollView>
       ) : searchError ? (
         <Text style={{ color: "red", margin: 10 }}>{searchError}</Text>
       ) : (
         <FlatList
+          style={{ width: "100%" }}
           showsVerticalScrollIndicator={false}
           data={searchResults}
           renderItem={renderItem}
           keyExtractor={(item) => item.id.toString()}
           numColumns={2}
+          columnWrapperStyle={styles.columnWrapper}
+          ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
           contentContainerStyle={[
             {
               backgroundColor: Colors[colorScheme ?? "dark"].background,
               flexGrow: 1, // Ensures FlatList always fills available space
-              minHeight: "100%", // Ensures background color covers the whole screen
-              // justifyContent: searchResults.length === 0 ? "center" : undefined,
-              alignItems: searchResults.length === 0 ? "center" : undefined,
+              paddingTop: 10,
+              paddingBottom: 20,
             },
             styles.container,
           ]}
@@ -447,14 +448,12 @@ const Search: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: {
-    // justifyContent: "center",
-    // paddingBottom: 20, // Optional: add some bottom padding
-    // alignContent: "center",
+    paddingHorizontal: 10,
+  },
+  columnWrapper: {
+    justifyContent: "space-between",
   },
   centeredContainer: {
-    // flex: 1,
-    // justifyContent: "center",
-    // alignItems: "center",
   },
   errorText: {
     color: "red",
@@ -464,13 +463,14 @@ const styles = StyleSheet.create({
   },
 
   movieCard: {
-    width: width / 2 - 5, // Roughly half screen width minus padding
+    width: (width - 30) / 2, // Roughly half screen width minus padding
+    justifyContent: "center",
+    alignItems: "center",
   },
   posterImage: {
     width: "100%",
-    height: 230, // Fixed height for posters
-    borderRadius: 30,
-    margin: 5,
+    height: 250, // Fixed height for posters
+    borderRadius: 8,
   },
   noPoster: {
     width: "100%",

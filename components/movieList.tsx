@@ -1,22 +1,31 @@
 // src/components/MovieList.tsx
 
-import React from "react";
+import { Image } from "expo-image";
+
 import {
   Button, // For efficient list rendering
   Dimensions, // For pagination buttons
   FlatList,
-  Image,
+  LayoutAnimation,
+  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
+  UIManager,
   useColorScheme,
   View,
+  ScrollView,
 } from "react-native";
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 import { useMovieContext } from "@/contexts/movieContext";
 import { Series } from "@/contexts/movieContext/types";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
 import { createShimmerPlaceholder } from "react-native-shimmer-placeholder";
 
 const { width } = Dimensions.get("window"); // Get screen width
@@ -27,6 +36,17 @@ const MovieList: React.FC = React.memo(function MovieList() {
     useMovieContext();
   const colorScheme = useColorScheme();
   const ShimmerPlaceholder = createShimmerPlaceholder(LinearGradient);
+  const [showShimmer, setShowShimmer] = useState(false);
+
+  useEffect(() => {
+    if (loadingSeries) {
+      setShowShimmer(true);
+    } else {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      const timer = setTimeout(() => setShowShimmer(false), 250);
+      return () => clearTimeout(timer);
+    }
+  }, [loadingSeries]);
 
   const handlePress = (id: number) => {
     router.push({
@@ -43,8 +63,10 @@ const MovieList: React.FC = React.memo(function MovieList() {
       {item.poster_path ? (
         <Image
           source={{ uri: `https://image.tmdb.org/t/p/w200${item.poster_path}` }}
-          style={styles.posterImage}
-          resizeMode="contain"
+          style={[styles.posterImage, { backgroundColor: colorScheme === "dark" ? "#1a1a1a" : "#ebebeb" }]}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+          transition={600}
         />
       ) : (
         <View style={styles.noPoster}>
@@ -54,46 +76,27 @@ const MovieList: React.FC = React.memo(function MovieList() {
     </TouchableOpacity>
   );
 
-  if (loadingSeries) {
+  if (showShimmer) {
     return (
-      <View style={{ flexDirection: "row" }}>
-        <ShimmerPlaceholder
-          shimmerColors={
-            colorScheme === "dark" ? ["#222", "#111", "#222"] : undefined
-          }
-          style={{
-            height: 150,
-            width: "30%",
-            borderRadius: 16,
-            // alignSelf: "center",
-            margin: 10,
-          }}
-        />
-        <ShimmerPlaceholder
-          shimmerColors={
-            colorScheme === "dark" ? ["#222", "#111", "#222"] : undefined
-          }
-          style={{
-            height: 150,
-            width: "30%",
-            borderRadius: 16,
-            // alignSelf: "center",
-            margin: 10,
-          }}
-        />
-        <ShimmerPlaceholder
-          shimmerColors={
-            colorScheme === "dark" ? ["#222", "#111", "#222"] : undefined
-          }
-          style={{
-            height: 150,
-            width: "30%",
-            borderRadius: 16,
-            // alignSelf: "center",
-            margin: 10,
-          }}
-        />
-      </View>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        {[1, 2, 3, 4].map((item, index) => (
+          <ShimmerPlaceholder
+            key={item}
+            shimmerColors={
+              colorScheme === "dark" ? ["#1a1a1a", "#2a2a2a", "#1a1a1a"] : ["#ebebeb", "#d3d3d3", "#ebebeb"]
+            }
+            duration={1200}
+            delay={index * 150}
+            style={{
+              height: 150,
+              width: width / 2.75 - 20,
+              borderRadius: 10,
+              marginLeft: 10,
+              marginBottom: 10,
+            }}
+          />
+        ))}
+      </ScrollView>
     );
   }
 
@@ -109,12 +112,12 @@ const MovieList: React.FC = React.memo(function MovieList() {
   return (
     <View>
       <FlatList
-        data={series}
+        data={series.slice(0, 10)}
         horizontal={true}
         renderItem={renderMovieItem}
         keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={styles.flatListContent}
-        showsVerticalScrollIndicator={false}
+        showsHorizontalScrollIndicator={false}
       />
     </View>
   );

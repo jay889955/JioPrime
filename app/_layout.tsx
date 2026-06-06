@@ -11,6 +11,7 @@ import {
   useColorScheme,
   View,
 } from "react-native";
+import { MovieContextProvider } from "./../contexts/movieContext";
 import appJson from "../app.json";
 import { checkGithubRelease } from "../utils/checkGithubRelease";
 export const unstable_settings = {
@@ -55,7 +56,7 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <>
+    <MovieContextProvider>
       <StatusBar
         style={colorScheme === "light" ? "dark" : "light"}
         translucent
@@ -83,7 +84,7 @@ export default function RootLayout() {
           </View>
         </View>
       </Modal>
-    </>
+    </MovieContextProvider>
   );
 }
 

@@ -18,7 +18,6 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
   return (
     <GestureHandlerRootView>
-      <MovieContextProvider>
         <StatusBar
           style={colorScheme === "light" ? "dark" : "light"}
           translucent
@@ -80,7 +79,6 @@ export default function RootLayout() {
             }}
           />
         </Tabs>
-      </MovieContextProvider>
     </GestureHandlerRootView>
   );
 }

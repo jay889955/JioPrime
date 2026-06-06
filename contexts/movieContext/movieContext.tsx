@@ -43,6 +43,11 @@ export const MovieContextProvider: React.FC<MovieContextProviderProps> = ({
   const [totalResults, setTotalResults] = useState<number>(0);
   const [hasMore, setHasMore] = useState<boolean>(true);
 
+  const [seriesCurrentPage, setSeriesCurrentPage] = useState<number>(1);
+  const [seriesTotalPages, setSeriesTotalPages] = useState<number>(1);
+  const [seriesTotalResults, setSeriesTotalResults] = useState<number>(0);
+  const [seriesHasMore, setSeriesHasMore] = useState<boolean>(true);
+
   // Remove useCallback, make fetchPopularMovies a regular function
   const fetchPopularMovies = useCallback(async (page: number = 1) => {
     // if (loadingMovies) return; // Prevent multiple fetches
@@ -70,7 +75,12 @@ export const MovieContextProvider: React.FC<MovieContextProviderProps> = ({
       if (page === 1) {
         setMovies(data.results);
       } else {
-        setMovies((prev) => [...prev, ...data.results]);
+        setMovies((prev) => {
+          const newItems = data.results.filter(
+            (newItem: Movie) => !prev.some((prevItem) => prevItem.id === newItem.id)
+          );
+          return [...prev, ...newItems];
+        });
       }
       setLoadingMovies(false);
       setCurrentPage(data.page);
@@ -112,8 +122,20 @@ export const MovieContextProvider: React.FC<MovieContextProviderProps> = ({
       }
 
       const data = await response.json();
-      setSeries(data.results);
-      // Do NOT update currentPage, totalPages, or totalResults here
+      if (page === 1) {
+        setSeries(data.results);
+      } else {
+        setSeries((prev) => {
+          const newItems = data.results.filter(
+            (newItem: Series) => !prev.some((prevItem) => prevItem.id === newItem.id)
+          );
+          return [...prev, ...newItems];
+        });
+      }
+      setSeriesCurrentPage(data.page);
+      setSeriesTotalPages(data.total_pages);
+      setSeriesTotalResults(data.total_results);
+      setSeriesHasMore(data.page < data.total_pages);
     } catch (err) {
       console.error("Failed to fetch series:", err);
       if (err instanceof Error) {
@@ -154,6 +176,10 @@ export const MovieContextProvider: React.FC<MovieContextProviderProps> = ({
       fetchPopularSeries,
       series,
       hasMore,
+      seriesCurrentPage,
+      seriesTotalPages,
+      seriesTotalResults,
+      seriesHasMore,
     }),
     [
       movies,
@@ -167,6 +193,10 @@ export const MovieContextProvider: React.FC<MovieContextProviderProps> = ({
       fetchPopularSeries,
       series,
       hasMore,
+      seriesCurrentPage,
+      seriesTotalPages,
+      seriesTotalResults,
+      seriesHasMore,
     ],
   );
 

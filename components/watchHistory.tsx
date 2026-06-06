@@ -5,18 +5,32 @@ import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import {
   FlatList,
-  Image,
   Pressable,
   RefreshControl,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import { Image } from "expo-image";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useThemeColor } from "@/contexts/colorContext/useThemeColor";
+import { useColorScheme } from "@/contexts/colorContext/useColorScheme";
 
 export default function WatchHistory() {
   const [items, setItems] = useState<any[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const router = useRouter();
+
+  const isDark = (useColorScheme() ?? 'light') === 'dark';
+  const backgroundColor = useThemeColor({}, 'background');
+  const textColor = useThemeColor({}, 'text');
+  const tintColor = useThemeColor({}, 'tint');
+
+  const overlayColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
+  const overlayColorStrong = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
+  const borderColor = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)';
+  const textMuted = isDark ? 'rgba(255,255,255,0.62)' : 'rgba(0,0,0,0.62)';
+  const iconColor = isDark ? '#E6E1D6' : '#687076';
 
   const load = useCallback(async () => {
     const list = await getWatchHistory();
@@ -66,11 +80,11 @@ export default function WatchHistory() {
   }
 
   return (
-    <View style={styles.screen}>
+    <SafeAreaView edges={['top']} style={[styles.screen, { backgroundColor }]}>
       <View style={styles.headerWrap}>
-        <Text style={styles.kicker}>Library</Text>
-        <Text style={styles.title}>Watch History</Text>
-        <Text style={styles.subtitle}>{emptyMessage}</Text>
+        <Text style={[styles.kicker, { color: tintColor }]}>Library</Text>
+        <Text style={[styles.title, { color: textColor }]}>Watch History</Text>
+        <Text style={[styles.subtitle, { color: textMuted }]}>{emptyMessage}</Text>
       </View>
 
       <FlatList
@@ -83,7 +97,7 @@ export default function WatchHistory() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            tintColor={Colors.dark.tint}
+            tintColor={tintColor}
           />
         }
         renderItem={({ item }) => {
@@ -93,66 +107,68 @@ export default function WatchHistory() {
               : "Movie";
 
           return (
-            <Pressable style={styles.card} onPress={() => openItem(item)}>
-              <View style={styles.posterWrap}>
+            <Pressable style={[styles.card, { backgroundColor: overlayColor, borderColor }]} onPress={() => openItem(item)}>
+              <View style={[styles.posterWrap, { backgroundColor: overlayColorStrong }]}>
                 {item.poster_path ? (
                   <Image
                     source={{
                       uri: `https://image.tmdb.org/t/p/w185${item.poster_path}`,
                     }}
                     style={styles.poster}
+                    contentFit="cover"
+                    cachePolicy="memory-disk"
+                    transition={200}
                   />
                 ) : (
-                  <View style={[styles.poster, styles.posterFallback]}>
-                    <MaterialIcons name="movie" size={26} color="#E6E1D6" />
+                  <View style={[styles.poster, styles.posterFallback, { backgroundColor: overlayColorStrong }]}>
+                    <MaterialIcons name="movie" size={26} color={iconColor} />
                   </View>
                 )}
               </View>
 
               <View style={styles.cardBody}>
-                <Text style={styles.cardTitle} numberOfLines={2}>
+                <Text style={[styles.cardTitle, { color: textColor }]} numberOfLines={2}>
                   {item.title || item.name || "Untitled"}
                 </Text>
-                <Text style={styles.cardMeta}>{label}</Text>
+                <Text style={[styles.cardMeta, { color: textMuted }]}>{label}</Text>
                 <View style={styles.badgeRow}>
-                  <View style={styles.badge}>
-                    <Text style={styles.badgeText}>
+                  <View style={[styles.badge, { backgroundColor: overlayColorStrong }]}>
+                    <Text style={[styles.badgeText, { color: textColor }]}>
                       {item.type === "tv" ? "Series" : "Film"}
                     </Text>
                   </View>
-                  <View style={styles.badgeAccent}>
+                  <View style={[styles.badgeAccent, { backgroundColor: tintColor }]}>
                     <MaterialIcons
                       name="play-arrow"
                       size={16}
-                      color="#120F0A"
+                      color={isDark ? "#120F0A" : "#FFFFFF"}
                     />
-                    <Text style={styles.badgeAccentText}>Resume</Text>
+                    <Text style={[styles.badgeAccentText, { color: isDark ? "#120F0A" : "#FFFFFF" }]}>Resume</Text>
                   </View>
                 </View>
               </View>
 
-              <MaterialIcons name="chevron-right" size={24} color="#A79F90" />
+              <MaterialIcons name="chevron-right" size={24} color={textMuted} />
             </Pressable>
           );
         }}
         ListEmptyComponent={
           <View style={styles.emptyState}>
-            <View style={styles.emptyIcon}>
-              <MaterialIcons name="history" size={30} color="#EDE5D7" />
+            <View style={[styles.emptyIcon, { backgroundColor: overlayColorStrong }]}>
+              <MaterialIcons name="history" size={30} color={iconColor} />
             </View>
-            <Text style={styles.emptyTitle}>No watch history yet</Text>
-            <Text style={styles.emptyText}>{emptyMessage}</Text>
+            <Text style={[styles.emptyTitle, { color: textColor }]}>No watch history yet</Text>
+            <Text style={[styles.emptyText, { color: textMuted }]}>{emptyMessage}</Text>
           </View>
         }
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#0E0C09",
     paddingTop: 18,
   },
   headerWrap: {
@@ -160,20 +176,17 @@ const styles = StyleSheet.create({
     paddingBottom: 14,
   },
   kicker: {
-    color: Colors.dark.tint,
     fontSize: 12,
     letterSpacing: 2,
     textTransform: "uppercase",
     marginBottom: 6,
   },
   title: {
-    color: Colors.dark.text,
     fontSize: 30,
     fontWeight: "800",
     letterSpacing: 0.3,
   },
   subtitle: {
-    color: "rgba(255,255,255,0.62)",
     marginTop: 8,
     lineHeight: 20,
   },
@@ -190,9 +203,7 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.05)",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.07)",
     borderRadius: 22,
     padding: 12,
     gap: 12,
@@ -202,7 +213,6 @@ const styles = StyleSheet.create({
     height: 84,
     borderRadius: 16,
     overflow: "hidden",
-    backgroundColor: "rgba(255,255,255,0.08)",
   },
   poster: {
     width: "100%",
@@ -211,7 +221,6 @@ const styles = StyleSheet.create({
   posterFallback: {
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.08)",
   },
   cardBody: {
     flex: 1,
@@ -219,13 +228,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   cardTitle: {
-    color: Colors.dark.text,
     fontSize: 16,
     fontWeight: "700",
     marginBottom: 5,
   },
   cardMeta: {
-    color: "rgba(255,255,255,0.58)",
     fontSize: 13,
     marginBottom: 10,
   },
@@ -239,10 +246,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.08)",
   },
   badgeText: {
-    color: Colors.dark.text,
     fontSize: 12,
     fontWeight: "600",
   },
@@ -250,12 +255,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 999,
-    backgroundColor: Colors.dark.tint,
     flexDirection: "row",
     alignItems: "center",
   },
   badgeAccentText: {
-    color: "#120F0A",
     fontSize: 12,
     fontWeight: "800",
   },
@@ -271,17 +274,14 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.08)",
     marginBottom: 16,
   },
   emptyTitle: {
-    color: Colors.dark.text,
     fontSize: 20,
     fontWeight: "800",
     marginBottom: 8,
   },
   emptyText: {
-    color: "rgba(255,255,255,0.65)",
     textAlign: "center",
     lineHeight: 20,
     maxWidth: 280,

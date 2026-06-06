@@ -1,8 +1,9 @@
 import appJson from "@/app.json";
 import { Colors } from "@/constants/Colors";
+import { useThemeColor } from "@/contexts/colorContext/useThemeColor";
 import { checkGithubRelease } from "@/utils/checkGithubRelease";
 import { clearAppCache, clearWatchHistory } from "@/utils/history";
-import { MaterialIcons } from "@expo/vector-icons";
+import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -14,10 +15,13 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function MoreScreen() {
   const router = useRouter();
   const [aboutVisible, setAboutVisible] = useState(false);
+  const backgroundColor = useThemeColor({}, 'background');
+  const textColor = useThemeColor({}, 'text');
 
   async function handleClearCache() {
     Alert.alert("Clear cache", "Clear app cache and history?", [
@@ -63,36 +67,37 @@ export default function MoreScreen() {
   }
 
   return (
-    <View
-      style={[styles.container, { backgroundColor: Colors.dark.background }]}
+    <SafeAreaView
+      edges={['top']}
+      style={[styles.container, { backgroundColor }]}
     >
-      <Text style={[styles.header, { color: Colors.dark.text }]}>Options</Text>
+      <Text style={[styles.header, { color: textColor }]}>Options</Text>
 
       <TouchableOpacity style={styles.item} onPress={handleClearCache}>
         <View style={styles.left}>
-          <MaterialIcons name="delete" size={22} color={Colors.dark.text} />
-          <Text style={[styles.label, { color: Colors.dark.text }]}>
+          <MaterialIcons name="delete" size={22} color={textColor} />
+          <Text style={[styles.label, { color: textColor }]}>
             Clear cache
           </Text>
         </View>
         <MaterialIcons
           name="chevron-right"
           size={22}
-          color={Colors.dark.text}
+          color={textColor}
         />
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.item} onPress={handleClearHistory}>
         <View style={styles.left}>
-          <MaterialIcons name="history" size={22} color={Colors.dark.text} />
-          <Text style={[styles.label, { color: Colors.dark.text }]}>
+          <MaterialIcons name="history" size={22} color={textColor} />
+          <Text style={[styles.label, { color: textColor }]}>
             Clear watch history
           </Text>
         </View>
         <MaterialIcons
           name="chevron-right"
           size={22}
-          color={Colors.dark.text}
+          color={textColor}
         />
       </TouchableOpacity>
 
@@ -101,15 +106,15 @@ export default function MoreScreen() {
         onPress={() => router.push("/watchHistory")}
       >
         <View style={styles.left}>
-          <MaterialIcons name="list" size={22} color={Colors.dark.text} />
-          <Text style={[styles.label, { color: Colors.dark.text }]}>
+          <MaterialIcons name="list" size={22} color={textColor} />
+          <Text style={[styles.label, { color: textColor }]}>
             Watch history
           </Text>
         </View>
         <MaterialIcons
           name="chevron-right"
           size={22}
-          color={Colors.dark.text}
+          color={textColor}
         />
       </TouchableOpacity>
 
@@ -118,45 +123,67 @@ export default function MoreScreen() {
         onPress={() => setAboutVisible(true)}
       >
         <View style={styles.left}>
-          <MaterialIcons name="info" size={22} color={Colors.dark.text} />
-          <Text style={[styles.label, { color: Colors.dark.text }]}>About</Text>
+          <MaterialIcons name="info" size={22} color={textColor} />
+          <Text style={[styles.label, { color: textColor }]}>About</Text>
         </View>
         <MaterialIcons
           name="chevron-right"
           size={22}
-          color={Colors.dark.text}
+          color={textColor}
         />
       </TouchableOpacity>
 
-      <Modal visible={aboutVisible} transparent animationType="slide">
+      <TouchableOpacity
+        style={styles.item}
+        onPress={() => Linking.openURL("https://github.com/roshan669/Uott")}
+      >
+        <View style={styles.left}>
+          <MaterialIcons name="star-outline" size={22} color={textColor} />
+          <Text style={[styles.label, { color: textColor }]}>
+            Star this project
+          </Text>
+        </View>
+        <MaterialIcons
+          name="open-in-new"
+          size={22}
+          color={textColor}
+        />
+      </TouchableOpacity>
+
+      <Modal visible={aboutVisible} transparent animationType="fade">
         <View style={styles.modalBackdrop}>
           <View
             style={[
               styles.modalBox,
-              { backgroundColor: Colors.dark.background },
+              { backgroundColor },
             ]}
           >
-            <Text style={[styles.title, { color: Colors.dark.text }]}>
+            <Text style={[styles.title, { color: textColor }]}>
               About
             </Text>
-            <Text style={{ color: Colors.dark.text }}>
+            <TouchableOpacity onPress={() => Linking.openURL("https://github.com/roshan669/Uott")} style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+              <Text style={{ color: textColor, fontSize: 18, fontWeight: "500" }}>NetPrime</Text>
+              <Ionicons name="logo-github" size={22} color={textColor} />
+            </TouchableOpacity>
+            <Text style={{ color: textColor }}>
               Version: {appJson.expo?.version}
             </Text>
             <View style={{ height: 12 }} />
             <TouchableOpacity style={styles.cta} onPress={handleCheckUpdate}>
-              <Text style={{ color: Colors.dark.text }}>Check for update</Text>
+              <Text style={{ color: textColor }}>Check for update</Text>
             </TouchableOpacity>
             <View style={{ height: 8 }} />
             <TouchableOpacity
               style={styles.cta}
               onPress={() => setAboutVisible(false)}
             >
-              <Text style={{ color: Colors.dark.text }}>Close</Text>
+              <Text style={{ color: textColor }}>Close</Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
-    </View>
+
+    </SafeAreaView>
   );
 }
 
@@ -171,12 +198,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+
   },
   left: { flexDirection: "row", alignItems: "center", gap: 12 },
   label: { marginLeft: 12, fontSize: 16 },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: "rgba(0,0,0,0.8)",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -187,5 +215,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   title: { fontSize: 18, fontWeight: "600", marginBottom: 8 },
-  cta: { paddingVertical: 10, alignItems: "center" },
+  cta: { paddingVertical: 10, alignItems: "center", borderColor: Colors.dark.tabIconDefault, borderWidth: StyleSheet.hairlineWidth, borderRadius: 10 },
+  // footer: { textAlign: "center", marginTop: 32, opacity: 0.6, color: Colors.dark.text },
 });
