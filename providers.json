@@ -3,10 +3,10 @@
     "id": "videasy",
     "name": "NetPrime",
     "urls": {
-      "movie": "https://player.videasy.net/movie/${id}",
-      "tv": "https://player.videasy.net/tv/${id}/${season}/${episode}"
+      "movie": "https://player.videasy.to/movie/${id}",
+      "tv": "https://player.videasy.to/tv/${id}/${season}/${episode}"
     },
-    "allowedDomain": "https://player.videasy.net"
+    "allowedDomain": "https://player.videasy.to"
   },
   {
     "id": "vsembed.ru",
